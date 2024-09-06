@@ -1,148 +1,343 @@
-#include <windows.h>
-#include <commdlg.h>
+package javapad;
 
-#define ID_FILE_NEW 1
-#define ID_FILE_OPEN 2
-#define ID_FILE_SAVE 3
-#define ID_FILE_EXIT 4
+import java.awt.Color;
+import java.awt.FileDialog;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import javax.swing.JColorChooser;
+import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    static HWND hwndEdit;
-    static OPENFILENAME ofn;
-    static TCHAR szFile[260];
-    static TCHAR szFileTitle[260];
-    static HANDLE hFile;
-    static DWORD dwBytesRead;
-    static TCHAR buffer[1024];
-    
-    switch (uMsg) {
-        case WM_CREATE:
-            hwndEdit = CreateWindowEx(
-                0, TEXT("EDIT"), NULL,
-                WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
-                0, 0, 0, 0,
-                hwnd, NULL, ((LPCREATESTRUCT)lParam)->hInstance, NULL
-            );
-            
-            // Initialize OPENFILENAME structure
-            ZeroMemory(&ofn, sizeof(ofn));
-            ofn.lStructSize = sizeof(ofn);
-            ofn.hwndOwner = hwnd;
-            ofn.lpstrFile = szFile;
-            ofn.nMaxFile = sizeof(szFile);
-            ofn.lpstrFileTitle = szFileTitle;
-            ofn.nMaxFileTitle = sizeof(szFileTitle);
-            ofn.lpstrFilter = TEXT("Text Files\0*.TXT\0All Files\0*.*\0");
-            ofn.nFilterIndex = 1;
-            ofn.lpstrFileTitle = NULL;
-            ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;
-            break;
-        
-        case WM_COMMAND:
-            switch (LOWORD(wParam)) {
-                case ID_FILE_NEW: {
-                    SetWindowText(hwndEdit, TEXT(""));
-                } break;
-                
-                case ID_FILE_OPEN: {
-                    if (GetOpenFileName(&ofn)) {
-                        hFile = CreateFile(
-                            ofn.lpstrFile,
-                            GENERIC_READ,
-                            0,
-                            NULL,
-                            OPEN_EXISTING,
-                            FILE_ATTRIBUTE_NORMAL,
-                            NULL
-                        );
-                        if (hFile != INVALID_HANDLE_VALUE) {
-                            ReadFile(hFile, buffer, sizeof(buffer) - 1, &dwBytesRead, NULL);
-                            buffer[dwBytesRead] = '\0';
-                            SetWindowText(hwndEdit, buffer);
-                            CloseHandle(hFile);
-                        }
-                    }
-                } break;
-                
-                case ID_FILE_SAVE: {
-                    if (GetSaveFileName(&ofn)) {
-                        hFile = CreateFile(
-                            ofn.lpstrFile,
-                            GENERIC_WRITE,
-                            0,
-                            NULL,
-                            CREATE_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL,
-                            NULL
-                        );
-                        if (hFile != INVALID_HANDLE_VALUE) {
-                            GetWindowText(hwndEdit, buffer, sizeof(buffer) - 1);
-                            DWORD dwBytesWritten;
-                            WriteFile(hFile, buffer, lstrlen(buffer) * sizeof(TCHAR), &dwBytesWritten, NULL);
-                            CloseHandle(hFile);
-                        }
-                    }
-                } break;
-                
-                case ID_FILE_EXIT:
-                    PostQuitMessage(0);
-                    break;
-            }
-            break;
-        
-        case WM_SIZE:
-            {
-                RECT rcClient;
-                GetClientRect(hwnd, &rcClient);
-                SetWindowPos(hwndEdit, NULL, 0, 0, rcClient.right, rcClient.bottom, SWP_NOZORDER | SWP_NOACTIVATE);
-            }
-            break;
-        
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            break;
-        
-        default:
-            return DefWindowProc(hwnd, uMsg, wParam, lParam);
-    }
-    
-    return 0;
-}
+public class javapad extends JFrame implements ActionListener
+{
+	JPanel panel= new JPanel(null);
+	JMenuBar bar=new JMenuBar();
+	JMenu file=new JMenu("File");
+	JMenu edit=new JMenu("Edit");
+	JMenuItem neww=new JMenuItem("New");
+	JMenuItem open=new JMenuItem("Open");
+	JMenuItem save=new JMenuItem("Save");
+	JMenuItem saveas=new JMenuItem("Save as");
+	JMenuItem exit=new JMenuItem("Exit");
+	JMenuItem cut=new JMenuItem("Cut");
+	JMenuItem copy=new JMenuItem("Copy");
+	JMenuItem paste=new JMenuItem("Paste");
+	JMenuItem delete=new JMenuItem("Delete");
+	JMenuItem selectall=new JMenuItem("Select All");
+	JMenuItem font=new JMenuItem("Font...");
+	JMenuItem status=new JMenuItem("Status Bar");
+	JMenuItem about=new JMenuItem("About Javapad");
+	JMenuItem color=new JMenuItem("Text Colour");
+	JMenuItem Areacolor=new JMenuItem("Area Colour");
+	JMenu format=new JMenu("Format");
+	JMenu view=new JMenu("View");
+	JMenu help=new JMenu("Help");
+	JTextArea area=new JTextArea();
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    const TCHAR CLASS_NAME[] = TEXT("Sample Window Class");
-    
-    WNDCLASS wc = {0};
-    wc.lpfnWndProc = WindowProc;
-    wc.hInstance = hInstance;
-    wc.lpszClassName = CLASS_NAME;
-    
-    RegisterClass(&wc);
-    
-    HWND hwnd = CreateWindowEx(
-        0,
-        CLASS_NAME,
-        TEXT("Basic Notepad"),
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-        NULL,
-        NULL,
-        hInstance,
-        NULL
-    );
-    
-    if (hwnd == NULL) {
-        return 0;
-    }
-    
-    ShowWindow(hwnd, nCmdShow);
-    UpdateWindow(hwnd);
-    
-    MSG msg;
-    while (GetMessage(&msg, NULL, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-    
-    return 0;
+	String a,bb;
+	int d;
+	FontChooser fontDialog=null;
+	public javapad()
+	{
+		
+		add(panel);
+
+		bar.setLayout(new FlowLayout());
+		bar.add(file);
+		bar.add(edit);
+		bar.add(format);
+		bar.add(view);
+		bar.add(help);
+		setJMenuBar(bar);
+				
+		file.add(neww);
+		file.add(open);
+		file.add(save);
+		file.add(saveas);
+		file.add(exit);
+		
+		edit.add(cut);
+		edit.add(copy);
+		edit.add(paste);
+		edit.add(delete);
+		edit.add(selectall);
+		
+		format.add(font);
+		format.add(color);
+		format.add(Areacolor);
+		view.add(status);
+		
+		help.add(about);
+		add(new JScrollPane(area));
+		area.setBounds(0,0,1370,700);
+		
+		
+		setSize(750,600);
+		setTitle("JavaPad");
+		setLocation(200,50);
+		setVisible(true);
+		setDefaultCloseOperation(DISPOSE_ON_CLOSE);		
+		
+		neww.addActionListener(this);
+		open.addActionListener(this);
+		save.addActionListener(this);
+		saveas.addActionListener(this);
+		exit.addActionListener(this);
+		cut.addActionListener(this);
+		copy.addActionListener(this);
+		paste.addActionListener(this);
+		delete.addActionListener(this);
+		font.addActionListener(this);
+		status.addActionListener(this);
+		about.addActionListener(this);
+		selectall.addActionListener(this);
+		color.addActionListener(this);
+		Areacolor.addActionListener(this);
+		
+	}
+	
+	public static void main(String [] args)
+	{
+		new javapad();
+	}
+
+	String filename;
+	
+	Font fon;
+	int i;
+	
+	public void actionPerformed(ActionEvent ae) 
+	{
+		
+		String what=ae.getActionCommand();
+		
+		
+		
+		if(what.equals("New"))
+		{
+				newfile();
+		}
+		
+		if(what.equals("Open"))
+		{
+			String result=area.getText();
+			if(result.isEmpty())
+			{
+				FileDialog fileDialog=new FileDialog(this, "Open File", FileDialog.LOAD);
+			fileDialog.setVisible(true);
+			
+			if(fileDialog.getFile()!=null)
+			{
+				filename=fileDialog.getDirectory()+ fileDialog.getFile();
+				setTitle(filename);
+			}
+			try {
+				FileReader fr = new FileReader(filename);
+				BufferedReader br=new BufferedReader(fr);
+				StringBuilder sb=new StringBuilder();
+				
+				String line;
+				
+				while((line=br.readLine())!=null)
+				{
+					sb.append(line+ "\n");
+					area.setText(sb.toString());
+				}
+				br.close();
+			} catch (FileNotFoundException e) {
+				System.out.println("File Not Found");
+				e.printStackTrace();
+			} catch (IOException e) {
+				
+				e.printStackTrace();
+			}
+			}
+			else
+			{
+				newfile();
+			}
+			
+			
+		}
+		
+				
+		if(what.equals("Save"))
+		{
+			if(filename!=null)
+			{
+				try
+				{
+					FileOutputStream fo=new FileOutputStream(filename);
+					DataOutputStream dout=new DataOutputStream(fo);
+					String result=area.getText();
+					dout.writeUTF(result);
+				}
+				catch(Exception e)
+				{
+					e.printStackTrace();
+				}
+			}
+			else
+			{
+				save();
+			}
+		}
+		
+		if(what.equals("Save as"))
+		{
+			save();
+		}
+		
+		if(what.equals("Exit"))
+		{
+			this.dispose();
+		}
+		
+		if(what.equals("Cut"))
+		{
+			area.cut();
+		}
+		
+		if(what.equals("Copy"))
+		{
+			area.copy();
+		}
+		
+		
+		if(what.equals("Paste"))
+		{
+			area.paste();
+		}
+		
+		if(what.equals("Delete"))
+		{
+			String ch=area.getSelectedText();
+			ch.equals("");
+			area.setText(ch);
+		}
+		
+		if(what.equals("Select All"))
+		{
+			area.selectAll();
+		}
+		
+		if(what.equals("Font..."))
+		{
+			if(fontDialog==null)
+				fontDialog=new FontChooser(area.getFont());
+
+			if(fontDialog.showDialog(javapad.this,"Choose a font"))
+				javapad.this.area.setFont(fontDialog.createFont());
+
+	
+		}
+		
+		if(what.equals("About Javapad"))
+		{
+			new about();
+		}
+		
+		if(what.equals("Text Colour"))
+		{
+			Color initialcolor=Color.RED;    
+			Color color=JColorChooser.showDialog(this,"Select a Text Color",initialcolor);    
+			area.setForeground(color);
+		}
+		
+		if(what.equals("Area Colour"))
+		{
+			Color initialcolor=Color.RED;    
+			Color color=JColorChooser.showDialog(this,"Select a Area Color",initialcolor);    
+			area.setBackground(color);		
+		}
+	}
+	
+	
+	public void save()
+	{
+		FileDialog fileDialog=new FileDialog(this, "Save File", FileDialog.SAVE);
+		fileDialog.setVisible(true);
+		
+		if(fileDialog.getFile()!=null)
+		{
+			filename=fileDialog.getDirectory()+ fileDialog.getFile();
+			setTitle(filename);
+		}
+		
+		try {
+			FileWriter fw=new FileWriter(filename);
+			fw.write(area.getText());
+			setTitle(filename);
+			fw.close();
+			
+		} catch (IOException e) {
+			System.out.println("File Not Found");
+			e.printStackTrace();
+		}
+	
+	}
+	
+	public void newfile()
+	{
+		
+		String result= area.getText();
+		if(result.isEmpty())
+		{
+			area.setText("");
+		}
+		else 
+		{
+			int retun=JOptionPane.showConfirmDialog(null, "Do you want to save changes ?");
+			if(retun==0)
+			{
+				FileDialog fileDialog=new FileDialog(this, "Save File", FileDialog.SAVE);
+				fileDialog.setVisible(true);
+				
+				if(fileDialog.getFile()!=null)
+				{
+					filename=fileDialog.getDirectory()+ fileDialog.getFile();
+					setTitle(filename);
+				}
+				
+				try {
+					FileWriter fw=new FileWriter(filename);
+					fw.write(area.getText());
+					setTitle(filename);
+					fw.close();
+					
+				} catch (IOException e) {
+					System.out.println("File Not Found");
+					e.printStackTrace();
+				}
+			}
+			else if(retun==1)
+			{
+				area.setText("");					
+			}
+			else if(retun==2)
+			{
+				area.setText(area.getText());
+			}
+			
+		}
+		
+	}
+
+	
+	
 }
